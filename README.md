@@ -35,18 +35,18 @@ Install via nuget package `MongooseOS.Rpc`.
         clientPfx: clientPfx,
         caCert: caCert);
 
-	await mgosRpcClient.ConnectAsync();
+    await mgosRpcClient.ConnectAsync();
 
-	// Get System Info (built in)
-	var sysRpc = new SysRpc(mgosRpcClient);
-	var sysInfo = await sysRpc.GetInfo("esp8266_ABCDEF");
+    // Get System Info (built in)
+    var sysRpc = new SysRpc(mgosRpcClient);
+    var sysInfo = await sysRpc.GetInfo("esp8266_ABCDEF");
 
-	// Call custom method
-	var result = await mgosRpcClient.SendAsync<int>("esp8266_ABCDEF", "Sum", new 
-	{
-		a = 1,
-		b = 2
-	});
+    // Call custom method
+    var result = await mgosRpcClient.SendAsync<int>("esp8266_ABCDEF", "Sum", new 
+    {
+        a = 1,
+        b = 2
+    });
 ```
 
 # Todo
