@@ -1,0 +1,22 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard1.3</TargetFramework>
+    <Authors>Zandt Tittle</Authors>
+    <Company />
+    <RepositoryUrl>https://github.com/ztittle/mgos-rpc-client-dotnet</RepositoryUrl>
+    <RepositoryType>gi</RepositoryType>
+    <PackageTags>mongoose-os</PackageTags>
+    <PackageProjectUrl>https://github.com/ztittle/mgos-rpc-client-dotnet</PackageProjectUrl>
+    <PackageLicenseUrl></PackageLicenseUrl>
+    <Description>A Mongoose-OS RPC Client implemented in .NET</Description>
+    <Version>0.1.0</Version>
+    <PackageId>MongooseOS.Rpc</PackageId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MQTTnet" Version="2.7.5" />
+    <PackageReference Include="Newtonsoft.Json" Version="11.0.2" />
+  </ItemGroup>
+
+</Project>
