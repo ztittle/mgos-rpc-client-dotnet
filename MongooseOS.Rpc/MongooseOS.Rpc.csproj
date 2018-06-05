@@ -5,12 +5,12 @@
     <Authors>Zandt Tittle</Authors>
     <Company />
     <RepositoryUrl>https://github.com/ztittle/mgos-rpc-client-dotnet</RepositoryUrl>
-    <RepositoryType>gi</RepositoryType>
+    <RepositoryType>git</RepositoryType>
     <PackageTags>mongoose-os</PackageTags>
     <PackageProjectUrl>https://github.com/ztittle/mgos-rpc-client-dotnet</PackageProjectUrl>
     <PackageLicenseUrl></PackageLicenseUrl>
     <Description>A Mongoose-OS RPC Client implemented in .NET</Description>
-    <Version>0.1.0</Version>
+    <Version>0.2.0</Version>
     <PackageId>MongooseOS.Rpc</PackageId>
   </PropertyGroup>
 

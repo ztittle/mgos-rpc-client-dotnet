@@ -29,7 +29,7 @@ Install via nuget package `MongooseOS.Rpc`.
     var caCert = File.ReadAllBytes("cacert.crt");
 
     var mgosRpcClient = new MgosRpcClient(
-        mqttFactory,
+        mqttFactory.CreateMqttClient(),
         mqttEndpoint: "mqttbroker:8883",
         clientId: "myclientId",
         clientPfx: clientPfx,

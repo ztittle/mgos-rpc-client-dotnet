@@ -33,8 +33,8 @@ namespace MongooseOS.Rpc
 
         public string RpcTopic => $"{_mqttClientOpts.ClientId}/rpc";
 
-        public MgosRpcClient(IMqttClientFactory factory, string mqttEndpoint, string clientId)
-            : this(factory, CreateClientOptions(mqttEndpoint, clientId))
+        public MgosRpcClient(IMqttClient mqttClient, string mqttEndpoint, string clientId)
+            : this(mqttClient, CreateClientOptions(mqttEndpoint, clientId))
         {
         }
 
@@ -59,8 +59,8 @@ namespace MongooseOS.Rpc
             }
         }
 
-        public MgosRpcClient(IMqttClientFactory factory, string mqttEndpoint, string clientId, byte[] clientPfx, byte[] caCert)
-            : this(factory, CreateSecureClientOptions(mqttEndpoint, clientId, clientPfx, caCert))
+        public MgosRpcClient(IMqttClient mqttClient, string mqttEndpoint, string clientId, byte[] clientPfx, byte[] caCert)
+            : this(mqttClient, CreateSecureClientOptions(mqttEndpoint, clientId, clientPfx, caCert))
         {
         }
 
@@ -78,7 +78,7 @@ namespace MongooseOS.Rpc
                 .Build();
         }
 
-        public MgosRpcClient(IMqttClientFactory factory, IMqttClientOptions mqttClientOptions)
+        public MgosRpcClient(IMqttClient mqttClient, IMqttClientOptions mqttClientOptions)
         {
             _mqttClientOpts = mqttClientOptions;
             _serializerSettings = new JsonSerializerSettings
@@ -86,7 +86,7 @@ namespace MongooseOS.Rpc
                 ContractResolver = new CamelCasePropertyNamesContractResolver()
             };
 
-            _mqttClient = factory.CreateMqttClient();
+            _mqttClient = mqttClient;
             _mqttClient.ApplicationMessageReceived += MsgReceived;
             _mqttClient.Disconnected += (sender, e) => Disconnected?.Invoke(sender, e);
 
