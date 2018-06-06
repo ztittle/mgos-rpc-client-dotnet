@@ -8,10 +8,12 @@
     <RepositoryType>git</RepositoryType>
     <PackageTags>mongoose-os</PackageTags>
     <PackageProjectUrl>https://github.com/ztittle/mgos-rpc-client-dotnet</PackageProjectUrl>
-    <PackageLicenseUrl></PackageLicenseUrl>
+    <PackageLicenseUrl>https://github.com/ztittle/mgos-rpc-client-dotnet/blob/master/LICENSE</PackageLicenseUrl>
     <Description>A Mongoose-OS RPC Client implemented in .NET</Description>
-    <Version>0.2.0</Version>
+    <Version>0.2.1</Version>
     <PackageId>MongooseOS.Rpc</PackageId>
+    <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
   </PropertyGroup>
 
   <ItemGroup>

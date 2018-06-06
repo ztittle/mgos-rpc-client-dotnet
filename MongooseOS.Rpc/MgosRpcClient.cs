@@ -33,18 +33,22 @@ namespace MongooseOS.Rpc
 
         public string RpcTopic => $"{_mqttClientOpts.ClientId}/rpc";
 
-        public MgosRpcClient(IMqttClient mqttClient, string mqttEndpoint, string clientId)
-            : this(mqttClient, CreateClientOptions(mqttEndpoint, clientId))
+        public MgosRpcClient(IMqttClient mqttClient, string mqttEndpoint, string clientId, Action<MqttClientOptionsBuilder> opts = null)
+            : this(mqttClient, CreateClientOptions(mqttEndpoint, clientId, opts))
         {
         }
 
-        private static IMqttClientOptions CreateClientOptions(string mqttEndpoint, string clientId)
+        private static IMqttClientOptions CreateClientOptions(string mqttEndpoint, string clientId, Action<MqttClientOptionsBuilder> opts = null)
         {
             ParseMqttEndpoint(mqttEndpoint, out var mqttEndpointHost, out var mqttEndpointPort, 1883);
 
-            return new MqttClientOptionsBuilder()
+            var optsBuilder = new MqttClientOptionsBuilder()
                 .WithTcpServer(mqttEndpointHost, port: mqttEndpointPort)
-                .WithClientId(clientId)
+                .WithClientId(clientId);
+
+            opts?.Invoke(optsBuilder);
+
+            return optsBuilder
                 .Build();
         }
 
@@ -59,22 +63,26 @@ namespace MongooseOS.Rpc
             }
         }
 
-        public MgosRpcClient(IMqttClient mqttClient, string mqttEndpoint, string clientId, byte[] clientPfx, byte[] caCert)
-            : this(mqttClient, CreateSecureClientOptions(mqttEndpoint, clientId, clientPfx, caCert))
+        public MgosRpcClient(IMqttClient mqttClient, string mqttEndpoint, string clientId, byte[] clientPfx, byte[] caCert, Action<MqttClientOptionsBuilder> opts = null)
+            : this(mqttClient, CreateSecureClientOptions(mqttEndpoint, clientId, clientPfx, caCert, opts))
         {
         }
 
-        private static IMqttClientOptions CreateSecureClientOptions(string mqttEndpoint, string clientId, byte[] clientPfx, byte[] caCert)
+        private static IMqttClientOptions CreateSecureClientOptions(string mqttEndpoint, string clientId, byte[] clientPfx, byte[] caCert, Action<MqttClientOptionsBuilder> opts = null)
         {
             ParseMqttEndpoint(mqttEndpoint, out var mqttEndpointHost, out var mqttEndpointPort, 8883);
 
-            return new MqttClientOptionsBuilder()
+            var optsBuilder = new MqttClientOptionsBuilder()
                 .WithTcpServer(mqttEndpointHost, port: mqttEndpointPort)
                 .WithClientId(clientId)
                 .WithTls(certificates: new byte[][] {
                         clientPfx,
                         caCert
-                })
+                });
+
+            opts?.Invoke(optsBuilder);
+
+            return optsBuilder
                 .Build();
         }
 
