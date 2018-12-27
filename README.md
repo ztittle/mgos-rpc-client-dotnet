@@ -1,5 +1,5 @@
 # Mongoose-OS RPC Client
-This library implements the [Mongoose-OS RPC Protocol](https://mongoose-os.com/docs/book/rpc.html) for use in .NET Applications.
+This library implements the [Mongoose-OS RPC Protocol](https://mongoose-os.com/docs/mos/userguide/rpc.md) for use in .NET Applications.
 
 It has been tested against AWS IoT and .NET Core, but it should work with any MQTT broker and .NET Application that supports .NET Standard 1.3 and above.
 
