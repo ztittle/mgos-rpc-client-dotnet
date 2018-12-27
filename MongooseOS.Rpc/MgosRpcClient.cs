@@ -14,6 +14,7 @@ namespace MongooseOS.Rpc
 {
     public class MgosRpcClient : IMgosRpcClient, IDisposable
     {
+        private int _messageId = 0;
         private static readonly TimeSpan _defaultTimeout = TimeSpan.FromMilliseconds(3000);
 
         private readonly JsonSerializerSettings _serializerSettings;
@@ -23,7 +24,7 @@ namespace MongooseOS.Rpc
 
         private readonly IDictionary<string, IMgosRpcHandler> _handlers;
 
-        private readonly Dictionary<string, TaskCompletionSource<object>> _pendingRequests;
+        private readonly Dictionary<int, TaskCompletionSource<object>> _pendingRequests;
 
         public event EventHandler<EventArgs> Disconnected;
 
@@ -98,7 +99,7 @@ namespace MongooseOS.Rpc
             _mqttClient.ApplicationMessageReceived += MsgReceived;
             _mqttClient.Disconnected += (sender, e) => Disconnected?.Invoke(sender, e);
 
-            _pendingRequests = new Dictionary<string, TaskCompletionSource<object>>();
+            _pendingRequests = new Dictionary<int, TaskCompletionSource<object>>();
             _handlers = new Dictionary<string, IMgosRpcHandler>();
         }
 
@@ -136,11 +137,11 @@ namespace MongooseOS.Rpc
 
         private void ProcessMgosResponse(MgosRpcResponse response)
         {
-            if (_pendingRequests.TryGetValue(response.Tag, out var tcs) == false)
+            if (_pendingRequests.TryGetValue(response.Id.GetValueOrDefault(), out var tcs) == false)
             {
-                throw new InvalidOperationException($"Unable to find a pending request for tag '{response.Tag}'");
+                throw new InvalidOperationException($"Unable to find a pending request for id '{response.Id}'");
             }
-            _pendingRequests.Remove(response.Tag);
+            _pendingRequests.Remove(response.Id.GetValueOrDefault());
 
             if (response.Error != null)
             {
@@ -160,9 +161,9 @@ namespace MongooseOS.Rpc
                 {
                     var response = new MgosRpcResponse
                     {
+                        Id = request.Id,
                         Src = deviceId,
                         Dst = request.Src,
-                        Tag = request.Tag
                     };
 
                     try
@@ -205,12 +206,12 @@ namespace MongooseOS.Rpc
 
                 ct.Token.Register(() => tcs.TrySetCanceled(), false);
 
-                var tag = Guid.NewGuid().ToString();
-                _pendingRequests.Add(tag, tcs);
-
+                var id = Interlocked.Increment(ref _messageId);
+                _pendingRequests.Add(id, tcs);
+                
                 var request = new MgosRpcRequest(method)
                 {
-                    Tag = tag,
+                    Id = id,
                     Src = _mqttClientOpts.ClientId,
                     Args = args
                 };

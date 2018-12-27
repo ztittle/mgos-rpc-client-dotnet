@@ -22,13 +22,8 @@
         public string Src { get; set; }
 
         /// <summary>
-        /// Optional. Any arbitrary string. Will be repeated in the response
+        ///  Frame ID. Required if a response is expected.
         /// </summary>
-        public string Tag { get; set; }
-
-        /// <summary>
-        /// Optional. Numeric frame ID.
-        /// </summary>
-        public string Id { get; set; }
+        public int? Id { get; set; }
     }
 }
