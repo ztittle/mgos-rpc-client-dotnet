@@ -1,7 +1,7 @@
 # Mongoose-OS RPC Client
 This library implements the [Mongoose-OS RPC Protocol](https://mongoose-os.com/docs/mos/userguide/rpc.md) for use in .NET Applications.
 
-It has been tested against AWS IoT and .NET Core, but it should work with any MQTT broker and .NET Application that supports .NET Standard 1.3 and above.
+It has been tested against AWS IoT and .NET Core, but it should work with any MQTT broker and .NET Application that supports .NET Standard 2.0 and above.
 
 # Features
 
@@ -13,7 +13,7 @@ It has been tested against AWS IoT and .NET Core, but it should work with any MQ
 
 The library depends on the following
 
-* [Newtonsoft.Json](https://www.newtonsoft.com/) for request and response serialization.
+* [System.Text.Json](https://www.nuget.org/packages/System.Text.Json) for request and response serialization.
 * [MQTTnet](https://github.com/chkr1011/MQTTnet) for connecting to an MQTT broker.
 
 # Install

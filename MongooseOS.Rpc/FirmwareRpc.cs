@@ -6,6 +6,7 @@ namespace MongooseOS.Rpc
     public interface IFirmwareRpc
     {
         Task UpdateFirmwareAsync(string deviceId, string firmwareUrl);
+        Task UpdateFirmwareAsync(string deviceId, string firmwareUrl, TimeSpan timeout);
     }
 
     public class FirmwareRpc : IFirmwareRpc
@@ -26,6 +27,16 @@ namespace MongooseOS.Rpc
             };
 
             return _rpcClient.SendAsync(deviceId, "OTA.Update", _timeout, args);
+        }
+
+        public Task UpdateFirmwareAsync(string deviceId, string firmwareUrl, TimeSpan timeout)
+        {
+            var args = new
+            {
+                Url = firmwareUrl
+            };
+
+            return _rpcClient.SendAsync(deviceId, "OTA.Update", timeout, args);
         }
     }
 }

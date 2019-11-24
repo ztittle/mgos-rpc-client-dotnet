@@ -1,12 +1,11 @@
 ﻿using MQTTnet;
 using MQTTnet.Client;
+using MQTTnet.Client.Options;
 using MQTTnet.Protocol;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using Newtonsoft.Json.Serialization;
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -17,7 +16,7 @@ namespace MongooseOS.Rpc
         private int _messageId = 0;
         private static readonly TimeSpan _defaultTimeout = TimeSpan.FromMilliseconds(3000);
 
-        private readonly JsonSerializerSettings _serializerSettings;
+        private readonly JsonSerializerOptions _serializerSettings;
 
         private readonly IMqttClient _mqttClient;
         private readonly IMqttClientOptions _mqttClientOpts;
@@ -76,9 +75,13 @@ namespace MongooseOS.Rpc
             var optsBuilder = new MqttClientOptionsBuilder()
                 .WithTcpServer(mqttEndpointHost, port: mqttEndpointPort)
                 .WithClientId(clientId)
-                .WithTls(certificates: new byte[][] {
+                .WithTls(opt =>
+                {
+                    opt.UseTls = true;
+                    opt.Certificates = new byte[][] {
                         clientPfx,
                         caCert
+                    };
                 });
 
             opts?.Invoke(optsBuilder);
@@ -90,14 +93,15 @@ namespace MongooseOS.Rpc
         public MgosRpcClient(IMqttClient mqttClient, IMqttClientOptions mqttClientOptions)
         {
             _mqttClientOpts = mqttClientOptions;
-            _serializerSettings = new JsonSerializerSettings
+            _serializerSettings = new JsonSerializerOptions
             {
-                ContractResolver = new CamelCasePropertyNamesContractResolver()
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                PropertyNameCaseInsensitive = true
             };
 
             _mqttClient = mqttClient;
-            _mqttClient.ApplicationMessageReceived += MsgReceived;
-            _mqttClient.Disconnected += (sender, e) => Disconnected?.Invoke(sender, e);
+            _mqttClient.UseApplicationMessageReceivedHandler(MsgReceived);
+            _mqttClient.UseDisconnectedHandler(e => Disconnected?.Invoke(this, e));
 
             _pendingRequests = new Dictionary<int, TaskCompletionSource<object>>();
             _handlers = new Dictionary<string, IMgosRpcHandler>();
@@ -115,22 +119,29 @@ namespace MongooseOS.Rpc
             return _mqttClient.DisconnectAsync();
         }
 
-        private void MsgReceived(object sender, MqttApplicationMessageReceivedEventArgs evt)
+        private void MsgReceived(MqttApplicationMessageReceivedEventArgs evt)
         {
-            var res = Encoding.UTF8.GetString(evt.ApplicationMessage.Payload);
+            var msg = evt.ApplicationMessage;
 
-            var jObject = JObject.Parse(res);
-
-            if (jObject["method"] != null)
+            if (msg.Topic != RpcTopic)
             {
-                var request = jObject.ToObject<MgosRpcRequest>();
+                return;
+            }
+
+            var res = Encoding.UTF8.GetString(msg.Payload);
+
+            var jObject = JsonDocument.Parse(res);
+
+            if (jObject.RootElement.TryGetProperty("method", out _))
+            {
+                var request = JsonSerializer.Deserialize<MgosRpcRequest>(res, _serializerSettings);
 
                 ProcessMgosRequest(evt.ClientId, request);
 
                 return;
             }
 
-            var response = jObject.ToObject<MgosRpcResponse>();
+            var response = JsonSerializer.Deserialize<MgosRpcResponse>(res, _serializerSettings);
 
             ProcessMgosResponse(response);
         }
@@ -177,7 +188,7 @@ namespace MongooseOS.Rpc
                         response.Error = e.Error;
                     }
 
-                    var payload = JsonConvert.SerializeObject(response, _serializerSettings);
+                    var payload = JsonSerializer.Serialize(response, _serializerSettings);
 
                     await _mqttClient.PublishAsync(new MqttApplicationMessage
                     {
@@ -216,7 +227,7 @@ namespace MongooseOS.Rpc
                     Args = args
                 };
 
-                var payload = JsonConvert.SerializeObject(request, _serializerSettings);
+                var payload = JsonSerializer.Serialize(request, _serializerSettings);
 
                 await _mqttClient.PublishAsync(new MqttApplicationMessage
                 {
@@ -229,14 +240,13 @@ namespace MongooseOS.Rpc
                 ct.CancelAfter(timeout);
 
                 var result = await tcs.Task;
-                var token = result as JToken;
 
-                if (token == null)
+                if (!(result is JsonElement jElement))
                 {
-                    return default(TResponse);
+                    return default;
                 }
 
-                return token.ToObject<TResponse>();
+                return JsonSerializer.Deserialize<TResponse>(jElement.GetRawText(), _serializerSettings);
             }
         }
 
@@ -252,7 +262,7 @@ namespace MongooseOS.Rpc
                 return null;
             }
 
-            var response = JsonConvert.DeserializeObject<MgosRpcResponse>(jsonResponse);
+            var response = JsonSerializer.Deserialize<MgosRpcResponse>(jsonResponse, _serializerSettings);
 
             return response.Result;
          }

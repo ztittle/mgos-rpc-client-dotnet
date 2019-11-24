@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 
 namespace MongooseOS.Rpc
 {
@@ -28,7 +29,8 @@ namespace MongooseOS.Rpc
 
     public interface ISysRpc
     {
-        Task<SysInfoResponse> GetInfo(string deviceId);
+        Task<SysInfoResponse> GetInfoAsync(string deviceId);
+        Task<SysInfoResponse> GetInfoAsync(string deviceId, TimeSpan timeout);
     }
 
     public class SysRpc : ISysRpc
@@ -40,9 +42,14 @@ namespace MongooseOS.Rpc
             _rpcClient = client;
         }
 
-        public Task<SysInfoResponse> GetInfo(string deviceId)
+        public Task<SysInfoResponse> GetInfoAsync(string deviceId)
         {
             return _rpcClient.SendAsync<SysInfoResponse>(deviceId, "Sys.GetInfo");
+        }
+
+        public Task<SysInfoResponse> GetInfoAsync(string deviceId, TimeSpan timeout)
+        {
+            return _rpcClient.SendAsync<SysInfoResponse>(deviceId, "Sys.GetInfo", timeout);
         }
     }
 }

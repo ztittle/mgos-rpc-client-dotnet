@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 
 namespace MongooseOS.Rpc
 {
@@ -9,7 +10,8 @@ namespace MongooseOS.Rpc
 
     public interface IRpc
     {
-        Task<PingResponse> Ping(string deviceId);
+        Task<PingResponse> PingAsync(string deviceId);
+        Task<PingResponse> PingAsync(string deviceId, TimeSpan timeout);
     }
 
     public class Rpc : IRpc
@@ -21,9 +23,14 @@ namespace MongooseOS.Rpc
             _rpcClient = client;
         }
 
-        public Task<PingResponse> Ping(string deviceId)
+        public Task<PingResponse> PingAsync(string deviceId)
         {
             return _rpcClient.SendAsync<PingResponse>(deviceId, "RPC.Ping");
+        }
+
+        public Task<PingResponse> PingAsync(string deviceId, TimeSpan timeout)
+        {
+            return _rpcClient.SendAsync<PingResponse>(deviceId, "RPC.Ping", timeout);
         }
     }
 }
