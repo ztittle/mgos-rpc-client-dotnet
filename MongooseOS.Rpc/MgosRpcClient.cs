@@ -98,6 +98,7 @@ namespace MongooseOS.Rpc
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
                 PropertyNameCaseInsensitive = true
             };
+            _serializerSettings.Converters.Add(new JsonConverters.BooleanConverter());
 
             _mqttClient = mqttClient;
             _mqttClient.UseApplicationMessageReceivedHandler(MsgReceived);
