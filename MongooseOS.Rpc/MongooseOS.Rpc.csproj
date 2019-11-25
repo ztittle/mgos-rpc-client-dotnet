@@ -10,7 +10,7 @@
     <PackageProjectUrl>https://github.com/ztittle/mgos-rpc-client-dotnet</PackageProjectUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <Description>A Mongoose-OS RPC Client implemented in .NET</Description>
-    <Version>1.1.0</Version>
+    <Version>1.1.2</Version>
     <PackageId>MongooseOS.Rpc</PackageId>
     <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
@@ -19,5 +19,11 @@
   <ItemGroup>
     <PackageReference Include="MQTTnet" Version="3.0.8" />
     <PackageReference Include="System.Text.Json" Version="4.6.0" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+      <_Parameter1>MongooseOS.Rpc.Tests</_Parameter1>
+    </AssemblyAttribute>
   </ItemGroup>
 </Project>

@@ -8,16 +8,26 @@ namespace MongooseOS.Rpc.JsonConverters
     {
         public override bool Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
-            string value = reader.GetString();
-            string chkValue = value.ToLower();
-            if (chkValue.Equals("true") || chkValue.Equals("yes") || chkValue.Equals("1"))
+            switch(reader.TokenType)
             {
-                return true;
+                case JsonTokenType.True:
+                case JsonTokenType.False:
+                    return reader.GetBoolean();
+                case JsonTokenType.String:
+                    string value = reader.GetString();
+                    string chkValue = value.ToLower();
+                    if (chkValue.Equals("true"))
+                    {
+                        return true;
+                    }
+                    if (value.ToLower().Equals("false"))
+                    {
+                        return false;
+                    }
+                    break;
+
             }
-            if (value.ToLower().Equals("false") || chkValue.Equals("no") || chkValue.Equals("0"))
-            {
-                return false;
-            }
+
             throw new JsonException();
         }
 
