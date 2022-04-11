@@ -4,6 +4,7 @@ using MQTTnet.Client.Options;
 using MQTTnet.Protocol;
 using System;
 using System.Collections.Generic;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.Json;
 using System.Threading;
@@ -78,9 +79,9 @@ namespace MongooseOS.Rpc
                 .WithTls(opt =>
                 {
                     opt.UseTls = true;
-                    opt.Certificates = new byte[][] {
-                        clientPfx,
-                        caCert
+                    opt.Certificates = new[] {
+                        new X509Certificate2(clientPfx),
+                        new X509Certificate2(caCert)
                     };
                 });
 
