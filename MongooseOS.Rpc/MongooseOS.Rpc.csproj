@@ -10,7 +10,7 @@
     <PackageProjectUrl>https://github.com/ztittle/mgos-rpc-client-dotnet</PackageProjectUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <Description>A Mongoose-OS RPC Client implemented in .NET</Description>
-    <Version>1.1.3</Version>
+    <Version>1.1.5</Version>
     <PackageId>MongooseOS.Rpc</PackageId>
     <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
