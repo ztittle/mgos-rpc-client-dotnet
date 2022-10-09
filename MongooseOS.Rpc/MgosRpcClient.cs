@@ -1,10 +1,5 @@
-﻿using MQTTnet;
-using MQTTnet.Client;
-using MQTTnet.Client.Options;
-using MQTTnet.Protocol;
-using System;
+﻿using System;
 using System.Collections.Generic;
-using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
@@ -21,80 +16,20 @@ namespace MongooseOS.Rpc
         private readonly JsonSerializerOptions _serializerSettings;
 
         private readonly IMqttClient _mqttClient;
-        private readonly IMqttClientOptions _mqttClientOpts;
+        private MqttClientOptions _mqttClientOpts;
 
         private readonly IDictionary<string, IMgosRpcHandler> _handlers;
 
         private readonly Dictionary<int, TaskCompletionSource<object>> _pendingRequests;
 
-        public event EventHandler<EventArgs> Disconnected;
-
-        public string ClientId => _mqttClientOpts.ClientId;
+        public string ClientId => _mqttClientOpts?.ClientId;
 
         public bool IsConnected => _mqttClient.IsConnected;
 
-        public string RpcTopic => $"{_mqttClientOpts.ClientId}/rpc";
+        public string RpcTopic => $"{ClientId}/rpc";
 
-        public MgosRpcClient(IMqttClient mqttClient, string mqttEndpoint, string clientId, Action<MqttClientOptionsBuilder> opts = null)
-            : this(mqttClient, CreateClientOptions(mqttEndpoint, clientId, opts))
+        public MgosRpcClient(IMqttClient mqttClient)
         {
-        }
-
-        private static IMqttClientOptions CreateClientOptions(string mqttEndpoint, string clientId, Action<MqttClientOptionsBuilder> opts = null)
-        {
-            ParseMqttEndpoint(mqttEndpoint, out var mqttEndpointHost, out var mqttEndpointPort, 1883);
-
-            var optsBuilder = new MqttClientOptionsBuilder()
-                .WithTcpServer(mqttEndpointHost, port: mqttEndpointPort)
-                .WithClientId(clientId);
-
-            opts?.Invoke(optsBuilder);
-
-            return optsBuilder
-                .Build();
-        }
-
-        private static void ParseMqttEndpoint(string mqttEndpoint, out string mqttEndpointHost, out int mqttEndpointPort, int defaultPort)
-        {
-            mqttEndpointPort = defaultPort;
-            var endpointParts = mqttEndpoint.Split(':');
-            mqttEndpointHost = endpointParts[0];
-            if (endpointParts.Length > 1)
-            {
-                int.TryParse(endpointParts[1], out mqttEndpointPort);
-            }
-        }
-
-        public MgosRpcClient(IMqttClient mqttClient, string mqttEndpoint, string clientId, byte[] clientPfx, byte[] caCert, Action<MqttClientOptionsBuilder> opts = null)
-            : this(mqttClient, CreateSecureClientOptions(mqttEndpoint, clientId, clientPfx, caCert, opts))
-        {
-        }
-
-        private static IMqttClientOptions CreateSecureClientOptions(string mqttEndpoint, string clientId, byte[] clientPfx, byte[] caCert, Action<MqttClientOptionsBuilder> opts = null)
-        {
-            ParseMqttEndpoint(mqttEndpoint, out var mqttEndpointHost, out var mqttEndpointPort, 8883);
-
-            var optsBuilder = new MqttClientOptionsBuilder()
-                .WithTcpServer(mqttEndpointHost, port: mqttEndpointPort)
-                .WithClientId(clientId)
-                .WithTls(opt =>
-                {
-                    opt.UseTls = true;
-                    opt.Certificates = new[] {
-                        new X509Certificate2(clientPfx),
-                        new X509Certificate2(caCert)
-                    };
-                });
-
-            opts?.Invoke(optsBuilder);
-
-            return optsBuilder
-                .Build();
-        }
-
-        public MgosRpcClient(IMqttClient mqttClient, IMqttClientOptions mqttClientOptions)
-        {
-            _mqttClientOpts = mqttClientOptions;
             _serializerSettings = new JsonSerializerOptions
             {
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
@@ -105,28 +40,26 @@ namespace MongooseOS.Rpc
 
             _mqttClient = mqttClient;
             _mqttClient.UseApplicationMessageReceivedHandler(MsgReceived);
-            _mqttClient.UseDisconnectedHandler(e => Disconnected?.Invoke(this, e));
 
             _pendingRequests = new Dictionary<int, TaskCompletionSource<object>>();
             _handlers = new Dictionary<string, IMgosRpcHandler>();
         }
 
-        public async Task ConnectAsync()
+        public async Task ConnectAsync(MqttClientOptions options, CancellationToken cancellationToken = default)
         {
-            await _mqttClient.ConnectAsync(_mqttClientOpts);
+            _mqttClientOpts = options;
+            await _mqttClient.ConnectAsync(options, cancellationToken);
 
-            await _mqttClient.SubscribeAsync(RpcTopic, MqttQualityOfServiceLevel.AtLeastOnce);
+            await _mqttClient.SubscribeAsync(RpcTopic, cancellationToken);
         }
 
-        public Task DisconnectAsync()
+        public Task DisconnectAsync(CancellationToken cancellationToken = default)
         {
-            return _mqttClient.DisconnectAsync();
+            return _mqttClient.DisconnectAsync(cancellationToken);
         }
 
-        private void MsgReceived(MqttApplicationMessageReceivedEventArgs evt)
+        private async Task MsgReceived(MqttApplicationMessageReceivedEventArgs msg, CancellationToken cancellationToken = default)
         {
-            var msg = evt.ApplicationMessage;
-
             if (msg.Topic != RpcTopic)
             {
                 return;
@@ -140,9 +73,7 @@ namespace MongooseOS.Rpc
             {
                 var request = JsonSerializer.Deserialize<MgosRpcRequest>(res, _serializerSettings);
 
-                ProcessMgosRequest(evt.ClientId, request);
-
-                return;
+                await ProcessMgosRequest(msg.ClientId, request, cancellationToken);
             }
 
             var response = JsonSerializer.Deserialize<MgosRpcResponse>(res, _serializerSettings);
@@ -168,98 +99,84 @@ namespace MongooseOS.Rpc
             }
         }
 
-        private void ProcessMgosRequest(string deviceId, MgosRpcRequest request)
+        private async Task ProcessMgosRequest(string deviceId, MgosRpcRequest request, CancellationToken cancellationToken)
         {
             if (_handlers.TryGetValue(request.Method, out var handler))
             {
-                Task.Run(async () =>
+                var response = new MgosRpcResponse
                 {
-                    var response = new MgosRpcResponse
-                    {
-                        Id = request.Id,
-                        Src = deviceId,
-                        Dst = request.Src,
-                    };
+                    Id = request.Id,
+                    Src = deviceId,
+                    Dst = request.Src,
+                };
 
-                    try
-                    {
-                        var responseArgs = await handler.ProcessAsync(deviceId, request.Args);
+                try
+                {
+                    var responseArgs = await handler.ProcessAsync(deviceId, request.Args);
 
-                        response.Result = responseArgs;
-                    }
-                    catch (MgosRpcException e)
-                    {
-                        response.Error = e.Error;
-                    }
+                    response.Result = responseArgs;
+                }
+                catch (MgosRpcException e)
+                {
+                    response.Error = e.Error;
+                }
 
-                    var payload = JsonSerializer.Serialize(response, _serializerSettings);
+                var payload = JsonSerializer.Serialize(response, _serializerSettings);
 
-                    await _mqttClient.PublishAsync(new MqttApplicationMessage
-                    {
-                        Topic = $"{request.Src}/rpc",
-                        Payload = Encoding.UTF8.GetBytes(payload),
-                        QualityOfServiceLevel = MqttQualityOfServiceLevel.AtLeastOnce,
-                        Retain = false
-                    });
-                });
+                await _mqttClient.PublishAsync($"{request.Src}/rpc", Encoding.UTF8.GetBytes(payload), cancellationToken);
             }
         }
 
-        public Task<TResponse> SendAsync<TResponse>(string deviceId, string method, object args = null)
-            => SendAsync<TResponse>(deviceId, method, _defaultTimeout, args);
-
-        public async Task<TResponse> SendAsync<TResponse>(string deviceId, string method, TimeSpan timeout, object args = null)
+        public async Task<TResponse> SendAsync<TResponse>(string deviceId, string method, object args = null, CancellationToken cancellationToken = default)
         {
+            if (cancellationToken == default) {
+                using var cts = new CancellationTokenSource(_defaultTimeout);
+
+                return await SendAsync<TResponse>(deviceId, method, args, cts.Token);
+            }
+
             if (_mqttClient.IsConnected == false)
             {
                 throw new InvalidOperationException("MqttClient is not connected");
             }
 
-            using (var ct = new CancellationTokenSource())
+            var tcs = new TaskCompletionSource<object>();
+
+            cancellationToken.Register(() => tcs.TrySetCanceled(), false);
+
+            var id = Interlocked.Increment(ref _messageId);
+            _pendingRequests.Add(id, tcs);
+            
+            var request = new MgosRpcRequest(method)
             {
-                var tcs = new TaskCompletionSource<object>();
+                Id = id,
+                Src = _mqttClientOpts.ClientId,
+                Args = args
+            };
 
-                ct.Token.Register(() => tcs.TrySetCanceled(), false);
+            var payload = JsonSerializer.Serialize(request, _serializerSettings);
 
-                var id = Interlocked.Increment(ref _messageId);
-                _pendingRequests.Add(id, tcs);
-                
-                var request = new MgosRpcRequest(method)
-                {
-                    Id = id,
-                    Src = _mqttClientOpts.ClientId,
-                    Args = args
-                };
+            await _mqttClient.PublishAsync($"{deviceId}/rpc", Encoding.UTF8.GetBytes(payload));
 
-                var payload = JsonSerializer.Serialize(request, _serializerSettings);
+            var result = await tcs.Task;
 
-                await _mqttClient.PublishAsync(new MqttApplicationMessage
-                {
-                    Topic = $"{deviceId}/rpc",
-                    Payload = Encoding.UTF8.GetBytes(payload),
-                    QualityOfServiceLevel = MqttQualityOfServiceLevel.AtLeastOnce,
-                    Retain = false
-                });
-
-                ct.CancelAfter(timeout);
-
-                var result = await tcs.Task;
-
-                if (!(result is JsonElement jElement))
-                {
-                    return default;
-                }
-
-                return JsonSerializer.Deserialize<TResponse>(jElement.GetRawText(), _serializerSettings);
+            if (!(result is JsonElement jElement))
+            {
+                return default;
             }
+
+            return JsonSerializer.Deserialize<TResponse>(jElement.GetRawText(), _serializerSettings);
         }
 
-        public Task<object> SendAsync(string deviceId, string method, object args = null)
-            => SendAsync(deviceId, method, _defaultTimeout, args);
-
-        public async Task<object> SendAsync(string deviceId, string method, TimeSpan timeout, object args = null)
+        public async Task<object> SendAsync(string deviceId, string method, object args = null, CancellationToken cancellationToken = default)
         {
-            var jsonResponse = await SendAsync<string>(deviceId, method, timeout, args);
+            if (cancellationToken == default) {
+                using var cts = new CancellationTokenSource(_defaultTimeout);
+
+                return await SendAsync(deviceId, method, args, cts.Token);
+            }
+
+            var jsonResponse = await SendAsync<string>(deviceId, method, args, cancellationToken);
 
             if (jsonResponse == null)
             {

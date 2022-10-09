@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace MongooseOS.Rpc
@@ -8,14 +9,11 @@ namespace MongooseOS.Rpc
         string ClientId { get; }
         string RpcTopic { get; }
         bool IsConnected { get; }
-        event EventHandler<EventArgs> Disconnected;
         void RegisterHandler(IMgosRpcHandler rpcHandler, string method);
-        Task ConnectAsync();
-        Task DisconnectAsync();
-        Task<object> SendAsync(string deviceId, string method, object args = null);
-        Task<object> SendAsync(string deviceId, string method, TimeSpan timeout, object args = null);
-        Task<TResponse> SendAsync<TResponse>(string deviceId, string method, object args = null);
-        Task<TResponse> SendAsync<TResponse>(string deviceId, string method, TimeSpan timeout, object args = null);
+        Task ConnectAsync(MqttClientOptions options, CancellationToken cancellationToken = default);
+        Task DisconnectAsync(CancellationToken cancellationToken = default);
+        Task<object> SendAsync(string deviceId, string method, object args = null, CancellationToken cancellationToken = default);
+        Task<TResponse> SendAsync<TResponse>(string deviceId, string method, object args = null, CancellationToken cancellationToken = default);
     }
 
     public interface IMgosRpcHandler

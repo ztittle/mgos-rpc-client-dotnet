@@ -1,7 +1,7 @@
 # Mongoose-OS RPC Client
 This library implements the [Mongoose-OS RPC Protocol](https://mongoose-os.com/docs/mos/userguide/rpc.md) for use in .NET Applications.
 
-It has been tested against AWS IoT and .NET Core, but it should work with any MQTT broker and .NET Application that supports .NET Standard 2.0 and above.
+It has been tested against AWS IoT and .NET Core, but it should work with any MQTT broker and .NET Application that supports .NET Standard 2.1 and above.
 
 # Features
 
@@ -11,10 +11,9 @@ It has been tested against AWS IoT and .NET Core, but it should work with any MQ
 
 # Dependencies
 
-The library depends on the following
+The library depends on the following:
 
 * [System.Text.Json](https://www.nuget.org/packages/System.Text.Json) for request and response serialization.
-* [MQTTnet](https://github.com/chkr1011/MQTTnet) for connecting to an MQTT broker.
 
 # Install
 
@@ -23,19 +22,26 @@ Install via nuget package `MongooseOS.Rpc`.
 # Usage
 
 ```csharp
-    var mqttFactory = new MQTTnet.MqttFactory();
+    class MqttClient : IMqttClient
+    {
+        // implement mqtt interface
+    }
+
+    var mqttClient = new MqttClient();
 
     var clientPfx = File.ReadAllBytes("client.pfx");
     var caCert = File.ReadAllBytes("cacert.crt");
 
-    var mgosRpcClient = new MgosRpcClient(
-        mqttFactory.CreateMqttClient(),
-        mqttEndpoint: "mqttbroker:8883",
-        clientId: "myclientId",
-        clientPfx: clientPfx,
-        caCert: caCert);
+    var mgosRpcClient = new MgosRpcClient(mqttClient;
 
-    await mgosRpcClient.ConnectAsync();
+    await mgosRpcClient.ConnectAsync(new MqttClientOptions
+        {
+            ClientId = "myclientId",
+            Host = "mqttbroker",
+            Port = 8883,
+            ClientPfx = clientPfx,
+            CaCert = caCert
+        });
 
     // Get System Info (built in)
     var sysRpc = new SysRpc(mgosRpcClient);

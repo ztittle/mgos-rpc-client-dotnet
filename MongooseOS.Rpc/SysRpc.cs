@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace MongooseOS.Rpc
@@ -29,8 +30,13 @@ namespace MongooseOS.Rpc
 
     public interface ISysRpc
     {
-        Task<SysInfoResponse> GetInfoAsync(string deviceId);
-        Task<SysInfoResponse> GetInfoAsync(string deviceId, TimeSpan timeout);
+        /// <summary>
+        /// Gets the device system information.
+        /// </summary>
+        /// <param name="deviceId">The device's ID.</param>
+        /// <param name="cancellationToken">The token used to cancel the request.</param>
+        /// <returns>A response containing the device's system information.</returns>
+        Task<SysInfoResponse> GetInfoAsync(string deviceId, CancellationToken cancellationToken = default);
     }
 
     public class SysRpc : ISysRpc
@@ -42,14 +48,9 @@ namespace MongooseOS.Rpc
             _rpcClient = client;
         }
 
-        public Task<SysInfoResponse> GetInfoAsync(string deviceId)
+        public Task<SysInfoResponse> GetInfoAsync(string deviceId, CancellationToken cancellationToken = default)
         {
-            return _rpcClient.SendAsync<SysInfoResponse>(deviceId, "Sys.GetInfo");
-        }
-
-        public Task<SysInfoResponse> GetInfoAsync(string deviceId, TimeSpan timeout)
-        {
-            return _rpcClient.SendAsync<SysInfoResponse>(deviceId, "Sys.GetInfo", timeout);
+            return _rpcClient.SendAsync<SysInfoResponse>(deviceId, "Sys.GetInfo", cancellationToken);
         }
     }
 }

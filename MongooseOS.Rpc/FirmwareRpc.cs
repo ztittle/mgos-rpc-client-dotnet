@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace MongooseOS.Rpc
@@ -10,8 +11,7 @@ namespace MongooseOS.Rpc
 
     public interface IFirmwareRpc
     {
-        Task<UpdateFirmwareResponse> UpdateFirmwareAsync(string deviceId, string firmwareUrl);
-        Task<UpdateFirmwareResponse> UpdateFirmwareAsync(string deviceId, string firmwareUrl, TimeSpan timeout);
+        Task<UpdateFirmwareResponse> UpdateFirmwareAsync(string deviceId, string firmwareUrl, CancellationToken cancellationToken = default);
     }
 
     public class FirmwareRpc : IFirmwareRpc
@@ -24,29 +24,26 @@ namespace MongooseOS.Rpc
             _rpcClient = client;
         }
 
-        public async Task<UpdateFirmwareResponse> UpdateFirmwareAsync(string deviceId, string firmwareUrl)
+        /// <summary>
+        /// Updates the device firmware.
+        /// </summary>
+        /// <param name="deviceId">The device's ID.</param>
+        /// <param name="firmwareUrl">The URL of the firmware used to update the device.</param>
+        /// <param name="cancellationToken">The token used to cancel the request.</param>
+        /// <returns>A response indicating success or failure.</returns>
+        public async Task<UpdateFirmwareResponse> UpdateFirmwareAsync(string deviceId, string firmwareUrl, CancellationToken cancellationToken = default)
         {
+            if (cancellationToken == default) {
+                using var cts = new CancellationTokenSource(_timeout);
+                return await UpdateFirmwareAsync(deviceId, firmwareUrl, cancellationToken);
+            }
+
             var args = new
             {
                 Url = firmwareUrl
             };
 
-            var success = await _rpcClient.SendAsync<bool>(deviceId, "OTA.Update", _timeout, args);
-
-            return new UpdateFirmwareResponse
-            {
-                Success = success
-            };
-        }
-
-        public async Task<UpdateFirmwareResponse> UpdateFirmwareAsync(string deviceId, string firmwareUrl, TimeSpan timeout)
-        {
-            var args = new
-            {
-                Url = firmwareUrl
-            };
-
-            var success = await _rpcClient.SendAsync<bool>(deviceId, "OTA.Update", timeout, args);
+            var success = await _rpcClient.SendAsync<bool>(deviceId, "OTA.Update", args, cancellationToken);
 
             return new UpdateFirmwareResponse
             {
