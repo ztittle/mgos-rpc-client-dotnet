@@ -50,7 +50,7 @@ namespace MongooseOS.Rpc
 
         public Task<SysInfoResponse> GetInfoAsync(string deviceId, CancellationToken cancellationToken = default)
         {
-            return _rpcClient.SendAsync<SysInfoResponse>(deviceId, "Sys.GetInfo", cancellationToken);
+            return _rpcClient.SendAsync<SysInfoResponse>(deviceId, "Sys.GetInfo", cancellationToken: cancellationToken);
         }
     }
 }

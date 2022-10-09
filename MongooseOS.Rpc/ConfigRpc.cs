@@ -33,7 +33,7 @@ namespace MongooseOS.Rpc
 
         public Task ConfigSaveAsync(string deviceId, CancellationToken cancellationToken = default)
         {
-            return _rpcClient.SendAsync(deviceId, "Config.Save", cancellationToken);
+            return _rpcClient.SendAsync(deviceId, "Config.Save", cancellationToken: cancellationToken);
         }
 
         public Task ConfigSetAsync<TConfig>(string deviceId, string key, TConfig value, CancellationToken cancellationToken = default)

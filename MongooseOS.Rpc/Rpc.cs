@@ -25,7 +25,7 @@ namespace MongooseOS.Rpc
 
         public Task<PingResponse> PingAsync(string deviceId, CancellationToken cancellationToken = default)
         {
-            return _rpcClient.SendAsync<PingResponse>(deviceId, "RPC.Ping", cancellationToken);
+            return _rpcClient.SendAsync<PingResponse>(deviceId, "RPC.Ping", cancellationToken: cancellationToken);
         }
     }
 }
